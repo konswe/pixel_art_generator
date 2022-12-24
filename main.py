@@ -1,6 +1,7 @@
 from PIL import Image
 import random
 import os
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QComboBox, QPushButton, QVBoxLayout, QProgressBar
 
 if not os.path.exists("pictures"):
     os.makedirs("pictures")
@@ -33,44 +34,80 @@ def gradient_function(start_color, end_color, steps):
     return gradient
 
 
-image_width = int(input("Enter the width of the image: "))
-image_height = int(input("Enter the height of the image: "))
-max_dimension = max(image_width, image_height)
+class MainWindow(QWidget):
+    def __init__(self):
+        super().__init__()
 
-color_scheme = input("Enter the color scheme (random, monochromatic, gradient): ")
-for x in range(0, 10):
-    i = 0
-    while os.path.exists(os.path.join("pictures", "pixel_art_{}.png".format(i))):
-        i += 1
+        self.width_label = QLabel("Width:")
+        self.width_edit = QLineEdit()
+        self.height_label = QLabel("Height:")
+        self.height_edit = QLineEdit()
+        self.color_scheme_label = QLabel("Color Scheme:")
+        self.color_scheme_combo_box = QComboBox()
+        self.color_scheme_combo_box.addItems(["random", "monochromatic", "gradient"])
+        self.generate_button = QPushButton("Generate")
+        self.generate_button.clicked.connect(self.generate_pixel_art)
 
-    image = Image.new("RGB", (image_width, image_height))
+        self.progress_bar = QProgressBar()
+        layout = QVBoxLayout()
+        layout.addWidget(self.width_label)
+        layout.addWidget(self.width_edit)
+        layout.addWidget(self.height_label)
+        layout.addWidget(self.height_edit)
+        layout.addWidget(self.color_scheme_label)
+        layout.addWidget(self.color_scheme_combo_box)
+        layout.addWidget(self.generate_button)
+        layout.addWidget(self.progress_bar)
+        self.setLayout(layout)
 
-    start_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-    end_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+    def generate_pixel_art(self):
+        image_width = int(self.width_edit.text())
+        image_height = int(self.height_edit.text())
+        max_dimension = max(image_width, image_height)
+        color_scheme = self.color_scheme_combo_box.currentText()
 
-    for x in range(image_width):
-        for y in range(image_height):
-            distance_from_center = ((x - image_width / 2) ** 2 + (y - image_height / 2) ** 2) ** 0.5
+        i = 0
+        while os.path.exists(os.path.join("pictures", "pixel_art_{}.png".format(i))):
+            i += 1
 
-            intensity = int(255 * (1 - distance_from_center / (max_dimension / 2)))
+        image = Image.new("RGB", (image_width, image_height))
 
-            r = int(random.uniform(intensity, 255))
-            g = int(random.uniform(intensity, 255))
-            b = int(random.uniform(intensity, 255))
+        start_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        end_color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        self.progress_bar.setMinimum(0)
+        self.progress_bar.setMaximum(image_width * image_height)
+        for x in range(image_width):
+            for y in range(image_height):
+                distance_from_center = ((x - image_width / 2) ** 2 + (y - image_height / 2) ** 2) ** 0.5
 
-            if color_scheme == "monochromatic":
-                r = g = b = random.randint(0, 255)
-            elif color_scheme == "gradient":
-                gradient = gradient_function(start_color, end_color, 100)
+                intensity = int(255 * (1 - distance_from_center / (max_dimension / 2)))
 
-                gradient_index = int(distance_from_center / (max_dimension / 2) * len(gradient))
+                r = int(random.uniform(intensity, 255))
+                g = int(random.uniform(intensity, 255))
+                b = int(random.uniform(intensity, 255))
 
-                if 0 <= gradient_index < len(gradient):
-                    r, g, b = gradient[gradient_index]
-                else:
+                if color_scheme == "monochromatic":
+                    r = g = b = random.randint(0, 255)
+                elif color_scheme == "gradient":
+                    gradient = gradient_function(start_color, end_color, 100)
 
-                    r, g, b = (0, 0, 0)
+                    gradient_index = int(distance_from_center / (max_dimension / 2) * len(gradient))
 
-            image.putpixel((x, y), (r, g, b))
+                    if 0 <= gradient_index < len(gradient):
+                        r, g, b = gradient[gradient_index]
+                    else:
+                        r, g, b = (0, 0, 0)
 
-    image.save(os.path.join("pictures", "pixel_art_{}.png".format(i)))
+                image.putpixel((x, y), (r, g, b))
+                self.progress_bar.setValue((x * image_height) + y)
+                
+
+        image.save(os.path.join("pictures", "pixel_art_{}.png".format(i)))
+        self.progress_bar.setValue(0)
+
+
+if __name__ == '__main__':
+    app = QApplication([])
+    window = MainWindow()
+    window.show()
+    app.exec_()
